@@ -1,59 +1,69 @@
-(Super simple) Python HipChat
-=============================
+Simple Python HipChat
+=====================
 
 Description
 -----------
+Wrapper around the HipChat API.
 
-Easy peasy wrapper for the `HipChat API <https://www.hipchat.com/docs/api>`_. Exposes core URI endpoint wrapper and some basic methods for common integrations.
+Big shout out to **kurttheviking** who wrote the original version of this library (which this version was
+forked from). This library is heavily based on his original code, this version adds a bunch of wrapper functions
+for getting rooms and users, and also adds object wrappers around room and user data.
 
+**Important Note:** This has has basic testing so far, but is not yet extensively tested, so bound to be a
+couple of bugs in here.
 
 Dependencies
 ------------
 None beyond the Python standard library.
-
 
 Usage
 -----
 
 Install::
 
-    pip install python-simple-hipchat
+    pip install https://github.com/robjohncox/python-simple-hipchat
 
 Instantiate::
 
     import hipchat
-    hipster = hipchat.HipChat(token=YourHipChatToken)
+    hipster = HipChat(token=YourHipChatToken)
 
-Request a URI endpoint as described in the HipChat API docs::
+Create and Lookup Rooms::
+
+    all_rooms = hipster.get_rooms()
+    room = hipster.get_room_by_name('My Room')
+    room = hipster.get_room_by_id(123456)
+    new_room = hipster.create_room('New Room', owner, topic='General Chit-Chat', private=True)
+
+Selected Room Attributes::
+
+    room.id
+    room.name
+    room.topic
+    room.members
+    room.participants
+
+Selected Room Functions::
+
+    room.send_message('Support Bot', 'There is a problem', notify=True)
+    room.change_topic('Lets talk about something different')
+    room.delete()
+
+Lookup Users::
+
+    all_users = hipster.get_users()
+    user = hipster.get_user_by_name('Carol')
+    user = hipster.get_user_by_id(123456)
+
+Selected User Attributes::
+
+    user.id
+    user.name
+    user.mention_name
+    user.title
+    user.status
+
+Raw API Access::
 
     hipster.method(url='method/url/', method="GET/POST", parameters={'name':'value', })
-
-Example methods::
-
-    # List rooms
-    hipster.method('rooms/list')
-
-    # Post a message to a HipChat room
     hipster.method('rooms/message', method='POST', parameters={'room_id': 8675309, 'from': 'HAL', 'message': 'All your base...'})
-
-Two handy shortcut methods::
-
-    # List rooms, print response JSON
-    print hipster.list_rooms()
-
-    # POST a message to a room, print response JSON
-    print hipster.message_room(8675309, 'HAL', 'All your base...')
-
-
-Changelog
----------
-
-**v0.2.0**
-
-- `Added Python 3 support without losing support for Python 2 <https://github.com/kurttheviking/python-simple-hipchat/pull/9>`_ (thanks @pimterry)
-- `Expose timeout for safer synchronous use <https://github.com/kurttheviking/python-simple-hipchat/pull/3>`_ (thanks @zachsnow)
-
-**v0.1.0**
-
-- Added shortcut method for messaging a room
-- Added shortcut method for listing rooms (requires admin token)
