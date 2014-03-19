@@ -7,14 +7,17 @@ except ImportError:
     from urllib import urlencode
     import urllib2 as urlrequest
 import json
+import logging
 from datetime import datetime
 
 
 # TODO Smarter with timeouts
-# TODO Logging
+# TODO Need to track how many API calls we have left
 # TODO Support API v2
 # TODO Split across multiple files
 # TODO Ability to specify protected rooms and users at login which blocks mutators on them
+
+log = logging.getLogger('hipchat')
 
 
 class _HipChatObject(object):
@@ -50,6 +53,7 @@ class Room(_HipChatObject):
 
     def refresh(self):
         if self.is_deleted:
+            log.warn('Cannot refresh data for room {0} as it has been deleted'.format(self.name))
             return
         response = self.hipchat.method('rooms/show', method='GET', parameters={
             'room_id': self.id,
@@ -59,12 +63,15 @@ class Room(_HipChatObject):
 
     def _ensure_fully_loaded(self):
         if self.is_deleted:
+            log.warn('Cannot refresh data for room {0} as it has been deleted'.format(self.name))
             return
         if not self._fully_loaded:
             self.refresh()
 
     def send_message(self, from_name, message, notify=False, color=MessagePriority.message, format=MessageFormat.text):
+        log.info('Sending message from {0} to room {1}: {2}'.format(from_name, self.name, message))
         if self.is_deleted:
+            log.warn('Cannot post message to room {0} as it has been deleted'.format(self.name))
             return
         self.hipchat.method('rooms/message', method='POST', parameters={
             'room_id': self.id,
@@ -111,7 +118,9 @@ class Room(_HipChatObject):
         self.send_message(from_name, message, notify=notify, color=color, format=MessageFormat.html)
 
     def change_topic(self, topic):
+        log.info('Changing topic for room {0} to {1}'.format(self.name, topic))
         if self.is_deleted:
+            log.warn('Cannot change topic, room is deleted')
             return
         self.hipchat.method('rooms/topic', method='POST', parameters={
             'room_id': self.id,
@@ -119,7 +128,9 @@ class Room(_HipChatObject):
         })
 
     def delete(self):
+        log.info('Deleting room {0}'.format(self.name))
         if self.is_deleted:
+            log.warn('Cannot delete room as it is already deleted')
             return
         self.hipchat.method('rooms/delete', method='POST', parameters={
             'room_id': self.id
@@ -342,6 +353,7 @@ class HipChat(object):
             return urlrequest.Request.get_method(self)
 
     def method(self, url, method="GET", parameters=None, timeout=None):
+        log.info('Making {0} request to {1} with parameters {2}'.format(method, url, parameters))
         method_url = urljoin(self.url, url)
 
         if method == "GET":
@@ -365,6 +377,7 @@ class HipChat(object):
                 request_data = None
 
         method_url = method_url + '?' + query_string
+        log.debug('Method URL: {0}'.format(method_url))
 
         req = self.RequestWithMethod(method_url, http_method=method, data=request_data)
         response = self.opener.open(req, None, timeout)

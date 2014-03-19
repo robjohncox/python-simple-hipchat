@@ -9,7 +9,7 @@ Big shout out to **kurttheviking** who wrote the original version of this librar
 forked from). This library is heavily based on his original code, this version adds a bunch of wrapper functions
 for getting rooms and users, and also adds object wrappers around room and user data.
 
-**Important Note:** This has has basic testing so far, but is not yet extensively tested, so bound to be a
+**Important Note:** This has had basic testing so far, but is not yet extensively tested, so bound to be a
 couple of bugs in here.
 
 Dependencies
@@ -26,7 +26,7 @@ Install::
 Instantiate::
 
     import hipchat
-    hipster = HipChat(token=YourHipChatToken)
+    hipster = hipchat.HipChat(token=YourHipChatToken)
 
 Create and Lookup Rooms::
 
