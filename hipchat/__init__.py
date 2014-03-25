@@ -15,8 +15,8 @@ from datetime import datetime
 # TODO Need to track how many API calls we have left
 # TODO Support API v2
 # TODO Split across multiple files
-# TODO Ability to specify protected rooms and users at login which blocks mutators on them
 
+# TODO Ability to secify protected rooms and users at login which blocks mutators on them
 log = logging.getLogger('hipchat')
 
 
@@ -50,6 +50,7 @@ class Room(_HipChatObject):
         super(Room, self).__init__(data, hipchat)
         self._fully_loaded = False
         self._deleted = False
+        self._protected = (self.id in hipchat.protected_room_ids)
 
     def refresh(self):
         if self.is_deleted:
@@ -70,6 +71,8 @@ class Room(_HipChatObject):
 
     def send_message(self, from_name, message, notify=False, color=MessagePriority.message, format=MessageFormat.text):
         log.info('Sending message from {0} to room {1}: {2}'.format(from_name, self.name, message))
+        self._raise_exception_if_protected()
+
         if self.is_deleted:
             log.warn('Cannot post message to room {0} as it has been deleted'.format(self.name))
             return
@@ -85,7 +88,11 @@ class Room(_HipChatObject):
         
     def send_table_message(self, from_name, data, header_row=True, notify=False, color=MessagePriority.message):
         # Table data should be a 2D iterable structure, with the outer level representing one row per entry
+
+        self._raise_exception_if_protected()
+
         if self.is_deleted:
+            log.warn('Cannot post message to room {0} as it has been deleted'.format(self.name))
             return
 
         def row(row_data, header):
@@ -107,7 +114,11 @@ class Room(_HipChatObject):
 
     def send_list_message(self, from_name, data, notify=False, color=MessagePriority.message):
         # List data should be an iterable of list items
+
+        self._raise_exception_if_protected()
+
         if self.is_deleted:
+            log.warn('Cannot post message to room {0} as it has been deleted'.format(self.name))
             return
 
         message = '<ul>'
@@ -119,6 +130,8 @@ class Room(_HipChatObject):
 
     def change_topic(self, topic):
         log.info('Changing topic for room {0} to {1}'.format(self.name, topic))
+        self._raise_exception_if_protected()
+
         if self.is_deleted:
             log.warn('Cannot change topic, room is deleted')
             return
@@ -129,6 +142,8 @@ class Room(_HipChatObject):
 
     def delete(self):
         log.info('Deleting room {0}'.format(self.name))
+        self._raise_exception_if_protected()
+
         if self.is_deleted:
             log.warn('Cannot delete room as it is already deleted')
             return
@@ -216,6 +231,10 @@ class Room(_HipChatObject):
     def participants(self):
         return [user for user in self.hipchat.get_users() if user.id in self.participant_ids]
 
+    def _raise_exception_if_protected(self):
+        if self._protected:
+            raise Exception('Not permitted to make changes to this room')
+
     def __unicode__(self):
         return 'HipChat Room {0}: {1}'.format(self.id, self.name)
 
@@ -283,13 +302,14 @@ class User(_HipChatObject):
 
 
 class HipChat(object):
-    def __init__(self, token=None, url=API_URL_DEFAULT, format=FORMAT_DEFAULT):
+    def __init__(self, token=None, url=API_URL_DEFAULT, format=FORMAT_DEFAULT, protected_room_ids=None):
         self.url = url
         self.token = token
         self.format = format
         self.opener = urlrequest.build_opener(urlrequest.HTTPSHandler())
         self._rooms = None
         self._users = None
+        self.protected_room_ids = protected_room_ids if protected_room_ids else []
 
     def get_rooms(self, force_refresh=False):
         if not self._rooms or force_refresh:
